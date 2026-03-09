@@ -1,0 +1,86 @@
+  3a. Combat Actions
+
+  12. Long-poll across turns — in one terminal:
+  curl http://localhost:8080/state/wait
+  12. Then end turn in another terminal. Verify: wait unblocks with new turn state
+
+  3b. Map Navigation
+
+  13. Get state on map
+  curl http://localhost:8080/state
+  13. Verify: context is "map", availableNodes lists nodes with coord and type
+  14. Select a map node (use a coord from availableNodes)
+  curl -X POST http://localhost:8080/action -d '{"type":"select_map_node","coord":{"row":0,"col":0}}'
+  14. Verify: game navigates to that room
+  15. Select invalid map node
+  curl -X POST http://localhost:8080/action -d '{"type":"select_map_node","coord":{"row":99,"col":99}}'
+  15. Verify: returns error
+
+  3c. Events
+
+  16. Get state in event
+  curl http://localhost:8080/state
+  16. Verify: context is "event", event.title, event.options with index, label, locked
+  17. Select event option
+  curl -X POST http://localhost:8080/action -d '{"type":"select_event_option","optionIndex":0}'
+  17. Verify: option is selected in-game, event progresses
+  18. Select invalid event option
+  curl -X POST http://localhost:8080/action -d '{"type":"select_event_option","optionIndex":99}'
+  18. Verify: returns error
+
+  3d. Rewards & Card Selection
+
+  19. Get state after combat (reward screen) — check if state reflects reward context (might still show "combat" context since rewards  
+  are an overlay, not a room)
+  20. Select a reward
+  curl -X POST http://localhost:8080/action -d '{"type":"select_reward","rewardIndex":0}'
+  20. Verify: reward collected (gold added, potion gained, or card selection opens)
+  21. Select a card from card reward
+  curl -X POST http://localhost:8080/action -d '{"type":"select_card","cardIndex":0}'
+  21. Verify: card added to deck
+  22. Skip card reward
+  curl -X POST http://localhost:8080/action -d '{"type":"skip"}'
+  22. Verify: card selection dismissed
+  23. Proceed past rewards
+  curl -X POST http://localhost:8080/action -d '{"type":"proceed"}'
+  23. Verify: moves to map screen
+
+  3e. Rest Site
+
+  24. Get state at rest site
+  curl http://localhost:8080/state
+  24. Verify: context is "rest", rest.options lists options with id, name, enabled
+  25. Select rest option by ID
+  curl -X POST http://localhost:8080/action -d '{"type":"rest_option","option":"Heal"}'
+  25. Verify: HP restored (or whatever the option does). Note: the actual OptionId might differ — check the state output first
+  26. Select invalid rest option
+  curl -X POST http://localhost:8080/action -d '{"type":"rest_option","option":"nonexistent"}'
+  26. Verify: returns error listing available options
+
+  3f. Shop
+
+  27. Get state in shop
+  curl http://localhost:8080/state
+  27. Verify: context is "shop", shop.items lists items with type, name, cost, affordable
+  28. Buy a shop item
+  curl -X POST http://localhost:8080/action -d '{"type":"shop_buy","itemIndex":0}'
+  28. Verify: gold deducted, item acquired
+  29. Leave shop
+  curl -X POST http://localhost:8080/action -d '{"type":"shop_leave"}'
+  29. Verify: returns to map
+
+  3g. Edge Cases
+
+  30. Action outside active run
+  curl -X POST http://localhost:8080/action -d '{"type":"end_turn"}'
+  30. Verify: returns error, no crash
+  31. Invalid JSON
+  curl -X POST http://localhost:8080/action -d 'not json'
+  31. Verify: returns {"error": "Invalid JSON"}
+  32. Empty body
+  curl -X POST http://localhost:8080/action -d ''
+  32. Verify: returns error
+  33. Missing type field
+  curl -X POST http://localhost:8080/action -d '{"foo":"bar"}'
+  33. Verify: returns error about missing type
+  34. Spam test — rapidly send 5-10 requests while in combat. Game should not freeze or crash.
