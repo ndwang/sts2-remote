@@ -1,6 +1,10 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Godot;
+using MegaCrit.Sts2.Core.AutoSlay.Helpers;
+using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Runs;
@@ -12,12 +16,54 @@ public class GameOverHandler : IContextHandler
 {
     public ContextType Type => ContextType.GameOver;
 
+    private enum Phase { Continue, MainMenu }
+
+    private Phase GetPhase(NGameOverScreen screen)
+    {
+        var mainMenuBtn = UiHelper.FindFirst<NReturnToMainMenuButton>(screen);
+        if (mainMenuBtn != null && mainMenuBtn.Visible && mainMenuBtn.IsEnabled)
+            return Phase.MainMenu;
+        return Phase.Continue;
+    }
+
     public Dictionary<string, object>? SerializeState(ContextInfo ctx)
     {
         var result = new Dictionary<string, object>();
 
         var history = RunManager.Instance?.History;
-        result["victory"] = history?.Win ?? false;
+        if (history == null)
+        {
+            result["victory"] = false;
+            return result;
+        }
+
+        result["victory"] = history.Win;
+        result["seed"] = history.Seed;
+        result["ascension"] = history.Ascension;
+        result["run_time"] = history.RunTime;
+        result["floor_reached"] = history.MapPointHistory.Count;
+
+        if (!history.Win)
+        {
+            if (history.KilledByEncounter != ModelId.none)
+                result["killed_by"] = history.KilledByEncounter.ToString();
+            else if (history.KilledByEvent != ModelId.none)
+                result["killed_by"] = history.KilledByEvent.ToString();
+        }
+
+        var runState = RunManager.Instance?.DebugOnlyGetState();
+        if (runState != null)
+        {
+            result["score"] = ScoreUtility.CalculateScore(runState, history.Win);
+        }
+
+        if (history.Players.Count > 0)
+        {
+            var player = history.Players[0];
+            result["character"] = player.Character.ToString();
+            result["deck_size"] = player.Deck.Count();
+            result["relic_count"] = player.Relics.Count();
+        }
 
         return result;
     }
@@ -26,18 +72,18 @@ public class GameOverHandler : IContextHandler
     {
         return new List<Dictionary<string, object>>
         {
-            new() { ["type"] = "return_to_menu" }
+            new() { ["type"] = "continue" }
         };
     }
 
     public async Task<string>? TryExecute(string actionType, JsonElement root, ContextInfo ctx)
     {
-        if (actionType == "return_to_menu")
-            return await ReturnToMenu();
+        if (actionType == "continue")
+            return await AdvanceGameOver();
         return null;
     }
 
-    private async Task<string> ReturnToMenu()
+    private async Task<string> AdvanceGameOver()
     {
         var screen = await GodotMainThread.RunAsync(() =>
         {
@@ -48,16 +94,31 @@ public class GameOverHandler : IContextHandler
         if (screen == null)
             return ActionResult.Error("Game over screen not found");
 
-        var button = await GodotMainThread.RunAsync(() => screen.GetNode<NReturnToMainMenuButton>("%MainMenuButton"));
-        if (button == null)
-            return ActionResult.Error("Main menu button not found");
+        var phase = await GodotMainThread.RunAsync(() => GetPhase(screen));
 
-        var enabled = await GodotMainThread.RunAsync(() => button.IsEnabled);
-        if (!enabled)
-            return ActionResult.Error("Main menu button not yet enabled");
+        if (phase == Phase.Continue)
+        {
+            var continueBtn = await GodotMainThread.RunAsync(() => UiHelper.FindFirst<NGameOverContinueButton>(screen));
+            if (continueBtn == null)
+                return ActionResult.Error("Continue button not found");
 
-        await GodotMainThread.ClickAsync(button);
-        Plugin.Log("Clicked return to main menu on game over screen");
-        return ActionResult.Ok("Returning to main menu");
+            var enabled = await GodotMainThread.RunAsync(() => continueBtn.IsEnabled);
+            if (!enabled)
+                return ActionResult.Error("Continue button not yet enabled");
+
+            await GodotMainThread.ClickAsync(continueBtn);
+            Plugin.Log("Clicked continue on game over screen");
+            return ActionResult.Ok("Clicked continue, summary playing");
+        }
+        else
+        {
+            var mainMenuBtn = await GodotMainThread.RunAsync(() => UiHelper.FindFirst<NReturnToMainMenuButton>(screen));
+            if (mainMenuBtn == null)
+                return ActionResult.Error("Main menu button not found");
+
+            await GodotMainThread.ClickAsync(mainMenuBtn);
+            Plugin.Log("Clicked return to main menu on game over screen");
+            return ActionResult.Ok("Returning to main menu");
+        }
     }
 }

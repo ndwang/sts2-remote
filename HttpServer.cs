@@ -220,16 +220,20 @@ public class HttpServer
                 return $"{{\"status\":\"ok\",\"message\":\"{EscapeJson(message)}\",\"stable\":{(stable ? "true" : "false")},\"state\":{stateJson}}}";
             }
 
+            // Action failed — re-signal decision point so /state/wait doesn't hang
+            SignalDecisionPoint();
             return result;
         }
         catch (AggregateException ae) when (ae.InnerException != null)
         {
             Plugin.LogError($"Action error: {ae.InnerException.Message}");
+            SignalDecisionPoint();
             return $"{{\"error\": \"{EscapeJson(ae.InnerException.Message)}\"}}";
         }
         catch (Exception e)
         {
             Plugin.LogError($"Action error: {e.Message}");
+            SignalDecisionPoint();
             return $"{{\"error\": \"{EscapeJson(e.Message)}\"}}";
         }
     }

@@ -134,18 +134,17 @@ public class EventContextHandler : IContextHandler
         if (sceneRoot == null)
             return ActionResult.Error("Cannot access scene tree");
 
-        var allButtons = UiHelper.FindAll<NEventOptionButton>(sceneRoot)
-            .Where(b => !b.Option.IsLocked)
-            .ToList();
+        var allButtons = UiHelper.FindAll<NEventOptionButton>(sceneRoot);
 
-        var evt = ctx.EventRoom?.LocalMutableEvent;
-        var targetOption = evt?.CurrentOptions.ElementAtOrDefault(optionIndex);
-        var button = targetOption != null
-            ? allButtons.FirstOrDefault(b => b.Option == targetOption)
-            : null;
+        // Buttons are added to the container in CurrentOptions order,
+        // so tree-order index matches the event option index
+        var button = optionIndex < allButtons.Count ? allButtons[optionIndex] : null;
 
-        if (button == null)
+        if (button == null || button.Option.IsLocked)
+        {
+            Plugin.LogDebug($"Event button lookup: requested={optionIndex}, found={allButtons.Count} buttons");
             return ActionResult.Error($"Event option index {optionIndex} not found or locked");
+        }
 
         await GodotMainThread.ClickAsync(button);
         Plugin.Log($"Selected event option {optionIndex}");
