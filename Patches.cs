@@ -12,6 +12,7 @@ using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Nodes.Screens.TreasureRoomRelic;
 using MegaCrit.Sts2.Core.Rooms;
@@ -184,6 +185,28 @@ public static class TreasureRoomAutoPatch
                 results.Add(match);
             FindAll(child, results);
         }
+    }
+}
+
+[HarmonyPatch(typeof(NGameOverContinueButton), "OnEnable")]
+public static class GameOverContinueEnabledPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix()
+    {
+        Plugin.LogDebug("Game over continue button enabled — scheduling stability check");
+        GameStabilityDetector.ScheduleStabilityCheck();
+    }
+}
+
+[HarmonyPatch(typeof(NReturnToMainMenuButton), "OnEnable")]
+public static class GameOverMainMenuEnabledPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix()
+    {
+        Plugin.LogDebug("Game over main menu button enabled — scheduling stability check");
+        GameStabilityDetector.ScheduleStabilityCheck();
     }
 }
 
