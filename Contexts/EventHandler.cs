@@ -120,13 +120,13 @@ public class EventContextHandler : IContextHandler
     {
         return actionType switch
         {
-            "select_event_option" => await SelectEventOption(root),
+            "select_event_option" => await SelectEventOption(root, ctx),
             "proceed" => await Proceed(),
             _ => null
         };
     }
 
-    private async Task<string> SelectEventOption(JsonElement root)
+    private async Task<string> SelectEventOption(JsonElement root, ContextInfo ctx)
     {
         var optionIndex = root.GetProperty("optionIndex").GetInt32();
 
@@ -134,14 +134,20 @@ public class EventContextHandler : IContextHandler
         if (sceneRoot == null)
             return ActionResult.Error("Cannot access scene tree");
 
-        var buttons = UiHelper.FindAll<NEventOptionButton>(sceneRoot)
+        var allButtons = UiHelper.FindAll<NEventOptionButton>(sceneRoot)
             .Where(b => !b.Option.IsLocked)
             .ToList();
 
-        if (optionIndex < 0 || optionIndex >= buttons.Count)
-            return ActionResult.Error($"Event option index {optionIndex} out of range (available: {buttons.Count})");
+        var evt = ctx.EventRoom?.LocalMutableEvent;
+        var targetOption = evt?.CurrentOptions.ElementAtOrDefault(optionIndex);
+        var button = targetOption != null
+            ? allButtons.FirstOrDefault(b => b.Option == targetOption)
+            : null;
 
-        await GodotMainThread.ClickAsync(buttons[optionIndex]);
+        if (button == null)
+            return ActionResult.Error($"Event option index {optionIndex} not found or locked");
+
+        await GodotMainThread.ClickAsync(button);
         Plugin.Log($"Selected event option {optionIndex}");
         return ActionResult.Ok("Event option selected");
     }
