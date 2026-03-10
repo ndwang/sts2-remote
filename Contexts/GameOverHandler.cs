@@ -83,10 +83,25 @@ public class GameOverHandler : IContextHandler
 
     public List<Dictionary<string, object>> GetCommands(ContextInfo ctx)
     {
-        return new List<Dictionary<string, object>>
+        var commands = new List<Dictionary<string, object>>();
+
+        var screen = NOverlayStack.Instance?.Peek() as NGameOverScreen;
+        if (screen == null)
+            return commands;
+
+        var phase = GetPhase(screen);
+        if (phase == Phase.MainMenu)
         {
-            new() { ["type"] = "continue" }
-        };
+            commands.Add(new() { ["type"] = "continue" });
+        }
+        else
+        {
+            var continueBtn = UiHelper.FindFirst<NGameOverContinueButton>(screen);
+            if (continueBtn != null && continueBtn.IsEnabled)
+                commands.Add(new() { ["type"] = "continue" });
+        }
+
+        return commands;
     }
 
     public async Task<string>? TryExecute(string actionType, JsonElement root, ContextInfo ctx)
