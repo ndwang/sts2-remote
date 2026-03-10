@@ -10,7 +10,7 @@
 | `GET` | `/map` | Full map serialization |
 | `GET` | `/log-level?level=<debug\|info\|error>` | Get or set log level |
 
-Base URL: `http://localhost:8080`
+Base URL: `http://localhost:57541`
 
 ## Typical Flow
 

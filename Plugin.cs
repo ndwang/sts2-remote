@@ -38,7 +38,7 @@ public static class Plugin
 
             RunManager.Instance.RoomEntered += OnRoomEntered;
 
-            Server = new HttpServer(8080);
+            Server = new HttpServer(57541);
             Server.Start();
 
             Log("Plugin initialized. Patches applied. HTTP server started.");
