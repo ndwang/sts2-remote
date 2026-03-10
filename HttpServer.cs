@@ -13,7 +13,7 @@ public class HttpServer
     private readonly int _port;
     private HttpListener? _listener;
     private CancellationTokenSource? _cts;
-    private readonly AutoResetEvent _decisionReady = new(false);
+    private readonly ManualResetEventSlim _decisionReady = new(false);
     private readonly ManualResetEventSlim _actionStabilityReady = new(false);
 
     public HttpServer(int port = 8080)
@@ -37,7 +37,7 @@ public class HttpServer
         _cts?.Cancel();
         _listener?.Stop();
         _listener?.Close();
-        _decisionReady.Set(); // unblock any waiting request
+        _decisionReady.Set(); // unblock any waiting requests
         _actionStabilityReady.Set(); // unblock any action waiting for stability
         Plugin.Log("HTTP server stopped.");
     }
@@ -147,13 +147,19 @@ public class HttpServer
 
     private string HandleStateWait(HttpListenerRequest request)
     {
+        // If the game is already stable, return immediately
+        if (GameStabilityDetector.IsStable())
+        {
+            return GameStateSerializer.Serialize();
+        }
+
         // Parse optional timeout query param (default 30s)
         var timeoutStr = request.QueryString["timeout"];
         var timeoutMs = 30000;
         if (int.TryParse(timeoutStr, out var t) && t > 0)
             timeoutMs = Math.Min(t, 120000);
 
-        var signaled = _decisionReady.WaitOne(timeoutMs);
+        var signaled = _decisionReady.Wait(timeoutMs);
         if (!signaled)
         {
             return "{\"timeout\": true}";
@@ -178,6 +184,7 @@ public class HttpServer
 
             // Mark that an action is starting so stability detector re-signals
             GameStabilityDetector.OnActionStarting();
+            _decisionReady.Reset();
             _actionStabilityReady.Reset();
             Plugin.LogDebug("HandleAction: starting ActionExecutor.Execute");
 
