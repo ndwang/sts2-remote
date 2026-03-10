@@ -33,16 +33,32 @@ public static class GameStateSerializer
 
             var state = new Dictionary<string, object>();
 
+            // Pre-run screens have no run state — handle separately
+            if (ctx.Type is ContextType.CharacterSelect or ContextType.MainMenu)
+            {
+                state["context"] = GetContextString(ctx.Type);
+                var preRunHandler = ActionExecutor.GetHandlers()
+                    .FirstOrDefault(h => h.Type == ctx.Type);
+                if (preRunHandler != null)
+                {
+                    var preRunState = preRunHandler.SerializeState(ctx);
+                    if (preRunState != null)
+                        state[GetStateKey(ctx.Type)] = preRunState;
+                    state["available_commands"] = preRunHandler.GetCommands(ctx);
+                }
+                return JsonSerializer.Serialize(state, JsonOptions);
+            }
+
             // "context" reflects the underlying room type (preserving API format),
             // while overlays are reported separately via the "overlay" key.
             var isOverlay = ctx.Type is ContextType.CardSelection
                 or ContextType.Rewards or ContextType.HandSelection;
             state["context"] = isOverlay
-                ? GetRoomContext(ctx.RunState.CurrentRoom)
+                ? GetRoomContext(ctx.RunState!.CurrentRoom)
                 : GetContextString(ctx.Type);
 
             // Player info (always present)
-            var players = ctx.RunState.Players;
+            var players = ctx.RunState!.Players;
             if (players.Count > 0)
                 state["player"] = SerializePlayer(players[0]);
 
@@ -112,6 +128,9 @@ public static class GameStateSerializer
         ContextType.RestSite => "rest",
         ContextType.Shop => "shop",
         ContextType.Treasure => "treasure",
+        ContextType.GameOver => "game_over",
+        ContextType.CharacterSelect => "character_select",
+        ContextType.MainMenu => "main_menu",
         _ => "unknown"
     };
 
@@ -133,12 +152,15 @@ public static class GameStateSerializer
         ContextType.RestSite => "rest",
         ContextType.Shop => "shop",
         ContextType.Treasure => "treasure",
+        ContextType.GameOver => "game_over",
+        ContextType.CharacterSelect => "character_select",
+        ContextType.MainMenu => "main_menu",
         _ => "state"
     };
 
     private static void SerializeUnderlyingRoom(ContextInfo ctx, Dictionary<string, object> state)
     {
-        var room = ctx.RunState.CurrentRoom;
+        var room = ctx.RunState!.CurrentRoom;
 
         if (room is CombatRoom)
         {

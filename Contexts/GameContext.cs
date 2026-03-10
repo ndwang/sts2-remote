@@ -8,10 +8,14 @@ using MegaCrit.Sts2.Core.Nodes.Cards.Holders;
 using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Screens;
 using MegaCrit.Sts2.Core.Nodes.Screens.CardSelection;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
+using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using Sts2Agent.Utilities;
 
 namespace Sts2Agent.Contexts;
 
@@ -26,13 +30,20 @@ public enum ContextType
     RestSite,
     Shop,
     Treasure,
+    GameOver,
+    CharacterSelect,
+    MainMenu,
     Unknown
 }
 
 public class ContextInfo
 {
     public ContextType Type { get; init; }
-    public RunState RunState { get; init; } = null!;
+    public RunState? RunState { get; init; }
+
+    // Character select (no run yet)
+    public NCharacterSelectScreen? CharacterSelectScreen { get; init; }
+    public List<NCharacterSelectButton>? CharacterButtons { get; init; }
 
     // Map
     public List<MegaCrit.Sts2.Core.Map.MapPoint>? AvailableMapNodes { get; init; }
@@ -63,10 +74,44 @@ public class ContextInfo
 
 public static class GameContext
 {
+    // Cache card holders between serialization and action execution
+    // to ensure consistent index mapping
+    private static object? _cachedOverlayScreen;
+    private static List<NCardHolder>? _cachedCardHolders;
+
     public static ContextInfo? Resolve()
     {
         var runState = RunManager.Instance?.DebugOnlyGetState();
-        if (runState == null) return null;
+        if (runState == null)
+        {
+            var sceneRoot = SceneHelper.GetSceneRoot();
+            if (sceneRoot == null) return null;
+
+            // Check character select screen first (it's a submenu on top of main menu)
+            var charScreen = UiHelper.FindFirst<NCharacterSelectScreen>(sceneRoot);
+            if (charScreen != null && charScreen.Visible)
+            {
+                var buttons = UiHelper.FindAll<NCharacterSelectButton>(charScreen);
+                return new ContextInfo
+                {
+                    Type = ContextType.CharacterSelect,
+                    CharacterSelectScreen = charScreen,
+                    CharacterButtons = buttons
+                };
+            }
+
+            // Check main menu (only when no submenus are open)
+            var mainMenu = UiHelper.FindFirst<NMainMenu>(sceneRoot);
+            if (mainMenu != null && mainMenu.Visible && !mainMenu.SubmenuStack.SubmenusOpen)
+            {
+                return new ContextInfo
+                {
+                    Type = ContextType.MainMenu
+                };
+            }
+
+            return null;
+        }
 
         // 1. Map screen
         if (NMapScreen.Instance is { IsOpen: true })
@@ -79,15 +124,37 @@ public static class GameContext
             };
         }
 
-        // 2. Overlay stack (rewards, card selection)
+        // 2. Overlay stack (game over, rewards, card selection)
         var overlayScreen = NOverlayStack.Instance?.Peek();
+
+        // Game over screen takes priority over all other overlays
+        if (overlayScreen is NGameOverScreen)
+        {
+            return new ContextInfo
+            {
+                Type = ContextType.GameOver,
+                RunState = runState
+            };
+        }
+
         if (overlayScreen is Node overlayNode)
         {
             // Card selection overlay?
-            var cardHolders = UiHelper.FindAll<NCardHolder>(overlayNode)
-                .OrderBy(h => h.GlobalPosition.Y)
-                .ThenBy(h => h.GlobalPosition.X)
-                .ToList();
+            // Use cached holders if same overlay screen, to keep indices consistent
+            List<NCardHolder> cardHolders;
+            if (_cachedOverlayScreen == overlayScreen && _cachedCardHolders != null
+                && _cachedCardHolders.All(GodotObject.IsInstanceValid))
+            {
+                cardHolders = _cachedCardHolders;
+            }
+            else
+            {
+                cardHolders = overlayScreen is NCardGridSelectionScreen
+                    ? UiHelper.FindAll<NGridCardHolder>(overlayNode).Cast<NCardHolder>().ToList()
+                    : UiHelper.FindAll<NCardHolder>(overlayNode);
+                _cachedOverlayScreen = overlayScreen;
+                _cachedCardHolders = cardHolders;
+            }
             if (cardHolders.Count > 0)
             {
                 return new ContextInfo

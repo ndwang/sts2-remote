@@ -3,6 +3,7 @@ using Godot;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using Sts2Agent.Contexts;
@@ -64,6 +65,12 @@ public static class GameStabilityDetector
     }
 
     public static void OnRoomEntered()
+    {
+        _wasStable = false;
+        ScheduleStabilityCheck();
+    }
+
+    public static void OnScreenTransition()
     {
         _wasStable = false;
         ScheduleStabilityCheck();
@@ -151,9 +158,35 @@ public static class GameStabilityDetector
 
             case ContextType.RestSite:
             case ContextType.Shop:
-            case ContextType.Treasure:
                 Plugin.Log($"IsStable: {ctx.Type} → true");
                 return true;
+
+            case ContextType.GameOver:
+                Plugin.Log("IsStable: game over screen → true");
+                return true;
+
+            case ContextType.MainMenu:
+                Plugin.Log("IsStable: main menu → true");
+                return true;
+
+            case ContextType.CharacterSelect:
+                Plugin.Log("IsStable: character select → true");
+                return true;
+
+            case ContextType.Treasure:
+            {
+                if (TreasureRoomAutoPatch.AutoClickInProgress)
+                {
+                    Plugin.Log("IsStable: treasure auto-click in progress → false");
+                    return false;
+                }
+                var treasureRoom = TreasureRoomAutoPatch.CurrentRoom;
+                var proceedEnabled = treasureRoom != null
+                    && GodotObject.IsInstanceValid(treasureRoom)
+                    && treasureRoom.ProceedButton?.IsEnabled == true;
+                Plugin.Log($"IsStable: treasure proceed={proceedEnabled} → {proceedEnabled}");
+                return proceedEnabled;
+            }
 
             default:
                 return false;

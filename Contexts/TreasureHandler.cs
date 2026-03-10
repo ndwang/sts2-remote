@@ -2,6 +2,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using Godot;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Runs;
 using Sts2Agent.Utilities;
 
@@ -30,17 +32,44 @@ public class TreasureHandler : IContextHandler
         }
         catch { }
 
+        var room = TreasureRoomAutoPatch.CurrentRoom;
+        result["proceedAvailable"] = room != null
+            && GodotObject.IsInstanceValid(room)
+            && room.ProceedButton?.IsEnabled == true;
+
         return result;
     }
 
     public List<Dictionary<string, object>> GetCommands(ContextInfo ctx)
     {
-        // Treasure room interactions happen through the rewards overlay
-        return new List<Dictionary<string, object>>();
+        var commands = new List<Dictionary<string, object>>();
+
+        var room = TreasureRoomAutoPatch.CurrentRoom;
+        if (room != null && GodotObject.IsInstanceValid(room) && room.ProceedButton?.IsEnabled == true)
+            commands.Add(new Dictionary<string, object> { ["type"] = "proceed" });
+
+        return commands;
     }
 
-    public Task<string>? TryExecute(string actionType, JsonElement root, ContextInfo ctx)
+    public async Task<string>? TryExecute(string actionType, JsonElement root, ContextInfo ctx)
     {
+        if (actionType == "proceed")
+            return await Proceed();
         return null;
+    }
+
+    private async Task<string> Proceed()
+    {
+        var room = TreasureRoomAutoPatch.CurrentRoom;
+        if (room == null || !GodotObject.IsInstanceValid(room))
+            return ActionResult.Error("No treasure room");
+
+        var button = room.ProceedButton;
+        if (button == null || !button.IsEnabled)
+            return ActionResult.Error("Proceed button not available");
+
+        await GodotMainThread.ClickAsync(button);
+        Plugin.Log("Clicked proceed on treasure room");
+        return ActionResult.Ok("Proceeded from treasure room");
     }
 }

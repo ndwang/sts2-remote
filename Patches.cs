@@ -1,13 +1,22 @@
 using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Godot;
 using HarmonyLib;
 using MegaCrit.Sts2.Core.Combat;
 using MegaCrit.Sts2.Core.Hooks;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Combat;
+using MegaCrit.Sts2.Core.Nodes.GodotExtensions;
+using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
+using MegaCrit.Sts2.Core.Nodes.Screens.MainMenu;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
+using MegaCrit.Sts2.Core.Nodes.Screens.TreasureRoomRelic;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using Sts2Agent.Utilities;
 
 namespace Sts2Agent;
 
@@ -81,5 +90,121 @@ public static class RoomEnteredPatch
     {
         Plugin.Log($"Room entered: {room.GetType().Name} — scheduling stability check");
         GameStabilityDetector.OnRoomEntered();
+    }
+}
+
+[HarmonyPatch(typeof(NTreasureRoom), nameof(NTreasureRoom._Ready))]
+public static class TreasureRoomAutoPatch
+{
+    public static bool AutoClickInProgress { get; private set; }
+    public static NTreasureRoom? CurrentRoom { get; private set; }
+
+    [HarmonyPostfix]
+    public static void Postfix(NTreasureRoom __instance)
+    {
+        try
+        {
+            Plugin.Log("Treasure room ready — auto-opening chest");
+            AutoClickInProgress = true;
+            CurrentRoom = __instance;
+            _ = AutoOpenTreasure(__instance);
+        }
+        catch (Exception e)
+        {
+            AutoClickInProgress = false;
+            Plugin.Log($"Error in TreasureRoomAutoPatch: {e}");
+        }
+    }
+
+    private static async Task AutoOpenTreasure(NTreasureRoom room)
+    {
+        try
+        {
+            // Click the chest button
+            var chest = await GodotMainThread.RunAsync(() => room.GetNode<NClickableControl>("Chest"));
+            if (chest == null)
+            {
+                Plugin.Log("Treasure room: chest button not found");
+                return;
+            }
+            await GodotMainThread.ClickAsync(chest);
+            Plugin.Log("Treasure room: chest clicked, waiting 3s for relics");
+
+            // Wait 3 seconds for the chest animation and relics to appear
+            await Task.Delay(3000);
+
+            // Find and click all visible relic holders
+            var holders = await GodotMainThread.RunAsync(() =>
+            {
+                var found = new List<NTreasureRoomRelicHolder>();
+                FindAll(room, found);
+                return found;
+            });
+
+            foreach (var holder in holders)
+            {
+                var canClick = await GodotMainThread.RunAsync(() =>
+                    GodotObject.IsInstanceValid(holder) && holder.IsEnabled && holder.Visible);
+                if (canClick)
+                {
+                    Plugin.Log("Treasure room: clicking relic");
+                    await GodotMainThread.ClickAsync(holder);
+                    await Task.Delay(500);
+                }
+            }
+
+            // Wait for the proceed button to become enabled (relic awarding is async)
+            for (int i = 0; i < 20; i++)
+            {
+                var proceedReady = await GodotMainThread.RunAsync(() =>
+                    GodotObject.IsInstanceValid(room) && room.ProceedButton?.IsEnabled == true);
+                if (proceedReady)
+                    break;
+                await Task.Delay(500);
+            }
+
+            Plugin.Log("Treasure room: auto-open complete");
+        }
+        catch (Exception e)
+        {
+            Plugin.Log($"Error in AutoOpenTreasure: {e}");
+        }
+        finally
+        {
+            AutoClickInProgress = false;
+            GameStabilityDetector.ScheduleStabilityCheck();
+        }
+    }
+
+    private static void FindAll<T>(Node parent, List<T> results) where T : Node
+    {
+        foreach (var child in parent.GetChildren())
+        {
+            if (child is T match)
+                results.Add(match);
+            FindAll(child, results);
+        }
+    }
+}
+
+[HarmonyPatch(typeof(NMainMenu), nameof(NMainMenu._Ready))]
+public static class MainMenuReadyPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix()
+    {
+        Plugin.Log("Main menu ready — scheduling stability check");
+        GameStabilityDetector.OnScreenTransition();
+    }
+}
+
+[HarmonyPatch(typeof(NCharacterSelectScreen), nameof(NCharacterSelectScreen.OnSubmenuOpened))]
+public static class CharacterSelectOpenedPatch
+{
+    [HarmonyPostfix]
+    public static void Postfix()
+    {
+        Plugin.Log("Character select screen opened — scheduling stability check");
+        GameStabilityDetector.OnScreenTransition();
     }
 }

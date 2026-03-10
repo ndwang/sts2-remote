@@ -20,7 +20,10 @@ public static class ActionExecutor
         new EventContextHandler(),
         new RestSiteHandler(),
         new ShopHandler(),
-        new TreasureHandler()
+        new TreasureHandler(),
+        new GameOverHandler(),
+        new CharacterSelectHandler(),
+        new MainMenuHandler()
     };
 
     public static async Task<string> Execute(string actionJson)
@@ -38,7 +41,7 @@ public static class ActionExecutor
 
             var ctx = GameContext.Resolve();
             if (ctx == null)
-                return ActionResult.Error("No active run");
+                return ActionResult.Error("No active run or interactive screen");
 
             // Dispatch to the handler matching the current context
             var handler = Handlers.FirstOrDefault(h => h.Type == ctx.Type);

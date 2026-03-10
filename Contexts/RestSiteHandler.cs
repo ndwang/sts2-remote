@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.AutoSlay.Helpers;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.RestSite;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
+using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
 using Sts2Agent.Utilities;
 
 namespace Sts2Agent.Contexts;
@@ -90,6 +91,26 @@ public class RestSiteHandler : IContextHandler
 
         await GodotMainThread.ClickAsync(match);
         Plugin.Log($"Selected rest option: {option}");
+
+        // Wait for the animation to finish: proceed button becomes enabled or an overlay appears
+        // (e.g., Smith opens card selection). Mirrors the game's AutoSlay RestSiteRoomHandler logic.
+        var nRoom = FindNRestSiteRoom();
+        if (nRoom != null)
+        {
+            for (int i = 0; i < 40; i++) // up to ~10s (40 * 250ms)
+            {
+                await Task.Delay(250);
+                var ready = await GodotMainThread.RunAsync(() =>
+                {
+                    if (nRoom.ProceedButton?.IsEnabled == true) return true;
+                    var overlay = NOverlayStack.Instance;
+                    if (overlay != null && overlay.ScreenCount > 0) return true;
+                    return false;
+                });
+                if (ready) break;
+            }
+        }
+
         return ActionResult.Ok("Rest option selected");
     }
 
