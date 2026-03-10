@@ -46,9 +46,19 @@ public class GameOverHandler : IContextHandler
         if (!history.Win)
         {
             if (history.KilledByEncounter != ModelId.none)
-                result["killed_by"] = history.KilledByEncounter.ToString();
+            {
+                var encounter = ModelDb.GetByIdOrNull<EncounterModel>(history.KilledByEncounter);
+                result["killed_by"] = encounter != null
+                    ? TextHelper.SafeLocString(() => encounter.Title)
+                    : history.KilledByEncounter.ToString();
+            }
             else if (history.KilledByEvent != ModelId.none)
-                result["killed_by"] = history.KilledByEvent.ToString();
+            {
+                var evt = ModelDb.GetByIdOrNull<EventModel>(history.KilledByEvent);
+                result["killed_by"] = evt != null
+                    ? TextHelper.SafeLocString(() => evt.Title)
+                    : history.KilledByEvent.ToString();
+            }
         }
 
         var runState = RunManager.Instance?.DebugOnlyGetState();
@@ -60,7 +70,10 @@ public class GameOverHandler : IContextHandler
         if (history.Players.Count > 0)
         {
             var player = history.Players[0];
-            result["character"] = player.Character.ToString();
+            var charModel = ModelDb.GetByIdOrNull<CharacterModel>(player.Character);
+            result["character"] = charModel != null
+                ? TextHelper.SafeLocString(() => charModel.Title)
+                : player.Character.ToString();
             result["deck_size"] = player.Deck.Count();
             result["relic_count"] = player.Relics.Count();
         }
