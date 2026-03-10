@@ -367,15 +367,37 @@ Also includes `map` key with available next nodes.
 **State:**
 ```json
 {
-  "victory": false
+  "victory": false,
+  "seed": "ABC123",
+  "ascension": 0,
+  "run_time": 1234.5,
+  "floor_reached": 3,
+  "killed_by": "Jaw Worm",
+  "score": 150,
+  "character": "铁甲战士",
+  "deck_size": 12,
+  "relic_count": 3
 }
 ```
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `victory` | bool | Whether the run was won |
+| `seed` | string | Run seed |
+| `ascension` | int | Ascension level |
+| `run_time` | float | Run duration in seconds |
+| `floor_reached` | int | Number of acts visited |
+| `killed_by` | string? | Localized name of encounter/event that killed the player (defeat only) |
+| `score` | int | Calculated run score |
+| `character` | string | Localized character name |
+| `deck_size` | int | Final deck size |
+| `relic_count` | int | Final relic count |
 
 **Commands:**
 
 | Action `type` | Parameters | Description |
 |---------------|------------|-------------|
-| `return_to_menu` | — | Return to main menu |
+| `continue` | — | Advance the game over screen. First call clicks Continue (plays summary animation), second call clicks Main Menu |
 
 ---
 
