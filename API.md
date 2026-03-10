@@ -213,6 +213,11 @@ Command objects also include `nodeType` and `coord` for display.
   "drawPileCount": 5,
   "discardPileCount": 0,
   "exhaustPileCount": 0,
+  "orbSlots": 3,
+  "orbs": [
+    { "index": 0, "name": "Lightning", "passiveValue": 3, "evokeValue": 8 },
+    { "index": 1, "name": "Frost", "passiveValue": 2, "evokeValue": 5 }
+  ],
   "playerBlock": 0,
   "playerPowers": [
     { "name": "Strength", "amount": 2, "description": "..." }
@@ -246,6 +251,7 @@ Command objects also include `nodeType` and `coord` for display.
 - Commands only available during player play phase
 - `targetIndex` references the alive-enemies array (same as serialized `enemies`)
 - Card `cost` can be an integer or `"X"`
+- `orbSlots` and `orbs` only present for Defect (when orb capacity > 0). `passiveValue`/`evokeValue` reflect current values after modifiers
 
 ---
 

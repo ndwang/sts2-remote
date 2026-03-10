@@ -188,6 +188,10 @@ Present when `context` is `"combat"` or when combat is the underlying room durin
   "drawPileCount": 5,
   "discardPileCount": 0,
   "exhaustPileCount": 0,
+  "orbSlots": 3,
+  "orbs": [
+    { "index": 0, "name": "Lightning", "passiveValue": 3, "evokeValue": 8 }
+  ],
   "playerBlock": 0,
   "playerPowers": [{ "name": "Strength", "amount": 2, "description": "..." }],
   "enemies": [
@@ -202,6 +206,7 @@ Present when `context` is `"combat"` or when combat is the underlying room durin
 - `targetType`: `AnyEnemy`, `AnyAlly`, `All`, `None`, etc.
 - `intents`: list because enemies can have multi-part turns. Attack intents include `damage` and optionally `hits` (when > 1).
 - Only alive enemies are included.
+- `orbSlots` and `orbs` only present for Defect (when orb capacity > 0). Values reflect current modifiers.
 
 ### `map`
 
