@@ -117,7 +117,7 @@ public class HandSelectionHandler : IContextHandler
 
         await GodotMainThread.RunAsync(() =>
         {
-            Plugin.Log($"ChooseHandCards: emitting Pressed on holder for '{holder.CardNode?.Model?.Title}'");
+            Plugin.LogDebug($"ChooseHandCards: emitting Pressed on holder for '{holder.CardNode?.Model?.Title}'");
             holder.EmitSignal(NCardHolder.SignalName.Pressed, holder);
         });
 
@@ -139,7 +139,7 @@ public class HandSelectionHandler : IContextHandler
             return ActionResult.Error("Confirm button is not enabled (need to select more cards?)");
 
         await GodotMainThread.ClickAsync(confirmButton);
-        Plugin.Log("ConfirmSelection: clicked hand select confirm button");
+        Plugin.LogDebug("ConfirmSelection: clicked hand select confirm button");
         return ActionResult.Ok("Selection confirmed");
     }
 

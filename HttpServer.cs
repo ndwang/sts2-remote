@@ -70,7 +70,7 @@ public class HttpServer
             }
             catch (Exception e)
             {
-                Plugin.Log($"HTTP listen error: {e.Message}");
+                Plugin.LogError($"HTTP listen error: {e.Message}");
             }
         }
     }
@@ -107,6 +107,10 @@ public class HttpServer
                     statusCode = 200;
                     break;
 
+                case "/log-level" when method == "GET":
+                    responseBody = HandleLogLevel(request);
+                    break;
+
                 default:
                     statusCode = 404;
                     responseBody = "{\"error\": \"Not found\"}";
@@ -122,7 +126,7 @@ public class HttpServer
         }
         catch (Exception e)
         {
-            Plugin.Log($"HTTP request error: {e.Message}");
+            Plugin.LogError($"HTTP request error: {e.Message}");
             try
             {
                 response.StatusCode = 500;
@@ -175,34 +179,34 @@ public class HttpServer
             // Mark that an action is starting so stability detector re-signals
             GameStabilityDetector.OnActionStarting();
             _actionStabilityReady.Reset();
-            Plugin.Log("HandleAction: starting ActionExecutor.Execute");
+            Plugin.LogDebug("HandleAction: starting ActionExecutor.Execute");
 
             var task = ActionExecutor.Execute(body);
             // Block the HTTP thread waiting for the action to complete (with timeout)
             if (!task.Wait(TimeSpan.FromSeconds(15)))
             {
-                Plugin.Log("HandleAction: ActionExecutor.Execute timed out after 15s");
+                Plugin.LogError("HandleAction: ActionExecutor.Execute timed out after 15s");
                 return "{\"error\": \"Action execution timed out\"}";
             }
 
             var result = task.Result;
-            Plugin.Log($"HandleAction: action result={result}");
+            Plugin.LogDebug($"HandleAction: action result={result}");
 
             // If action succeeded, wait for game to stabilize and return new state
             using var resultDoc = JsonDocument.Parse(result);
             if (!resultDoc.RootElement.TryGetProperty("error", out _))
             {
-                Plugin.Log("HandleAction: action succeeded, scheduling stability check");
-                Plugin.Log($"HandleAction: IsStable()={GameStabilityDetector.IsStable()}");
+                Plugin.LogDebug("HandleAction: action succeeded, scheduling stability check");
+                Plugin.LogDebug($"HandleAction: IsStable()={GameStabilityDetector.IsStable()}");
                 // Schedule a stability check for actions that don't go through
                 // the game's action queue (e.g., UI click actions like rewards, map, events)
                 GameStabilityDetector.ScheduleStabilityCheck();
-                Plugin.Log("HandleAction: waiting for stability (up to 10s)...");
+                Plugin.LogDebug("HandleAction: waiting for stability (up to 10s)...");
                 var stable = _actionStabilityReady.Wait(10000);
-                Plugin.Log($"HandleAction: stability wait returned, stable={stable}");
-                Plugin.Log($"HandleAction: IsStable() after wait={GameStabilityDetector.IsStable()}");
+                Plugin.LogDebug($"HandleAction: stability wait returned, stable={stable}");
+                Plugin.LogDebug($"HandleAction: IsStable() after wait={GameStabilityDetector.IsStable()}");
                 var stateJson = GameStateSerializer.Serialize();
-                Plugin.Log($"HandleAction: serialized state length={stateJson.Length}");
+                Plugin.LogDebug($"HandleAction: serialized state length={stateJson.Length}");
 
                 // Extract message from action result
                 string message = "ok";
@@ -220,14 +224,30 @@ public class HttpServer
         }
         catch (AggregateException ae) when (ae.InnerException != null)
         {
-            Plugin.Log($"Action error: {ae.InnerException.Message}");
+            Plugin.LogError($"Action error: {ae.InnerException.Message}");
             return $"{{\"error\": \"{EscapeJson(ae.InnerException.Message)}\"}}";
         }
         catch (Exception e)
         {
-            Plugin.Log($"Action error: {e.Message}");
+            Plugin.LogError($"Action error: {e.Message}");
             return $"{{\"error\": \"{EscapeJson(e.Message)}\"}}";
         }
+    }
+
+    private string HandleLogLevel(HttpListenerRequest request)
+    {
+        var level = request.QueryString["level"];
+        if (string.IsNullOrEmpty(level))
+            return $"{{\"level\": \"{Plugin.CurrentLogLevel.ToString().ToLower()}\"}}";
+
+        if (Enum.TryParse<LogLevel>(level, ignoreCase: true, out var parsed))
+        {
+            Plugin.CurrentLogLevel = parsed;
+            Plugin.Log($"Log level changed to {parsed}");
+            return $"{{\"level\": \"{parsed.ToString().ToLower()}\"}}";
+        }
+
+        return "{\"error\": \"Invalid level. Use: debug, info, error\"}";
     }
 
     private static string EscapeJson(string s)

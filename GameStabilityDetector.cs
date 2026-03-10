@@ -21,7 +21,7 @@ public static class GameStabilityDetector
     public static void Initialize()
     {
         TrySubscribeToActionExecutor();
-        Plugin.Log("GameStabilityDetector initialized.");
+        Plugin.LogDebug("GameStabilityDetector initialized.");
     }
 
     private static void TrySubscribeToActionExecutor()
@@ -34,11 +34,11 @@ public static class GameStabilityDetector
             executor.BeforeActionExecuted += _ => { _wasStable = false; };
             executor.AfterActionExecuted += _ => ScheduleStabilityCheck();
             _subscribedToActionExecutor = true;
-            Plugin.Log("Subscribed to ActionExecutor events.");
+            Plugin.LogDebug("Subscribed to ActionExecutor events.");
         }
         catch (Exception e)
         {
-            Plugin.Log($"ActionExecutor not ready yet: {e.Message}");
+            Plugin.LogDebug($"ActionExecutor not ready yet: {e.Message}");
         }
     }
 
@@ -59,7 +59,7 @@ public static class GameStabilityDetector
 
     public static void OnHandSelectionEntered()
     {
-        Plugin.Log("Hand selection entered — scheduling stability check");
+        Plugin.LogDebug("Hand selection entered — scheduling stability check");
         _wasStable = false;
         ScheduleStabilityCheck();
     }
@@ -93,12 +93,12 @@ public static class GameStabilityDetector
     {
         _pendingCheck = false;
         var stable = IsStable();
-        Plugin.Log($"CheckStability: stable={stable}, _wasStable={_wasStable}");
+        Plugin.LogDebug($"CheckStability: stable={stable}, _wasStable={_wasStable}");
         if (stable && !_wasStable)
         {
             _wasStable = true;
             Plugin.Log("=== GAME STABLE ===");
-            Plugin.Log(GameStateSerializer.Serialize());
+            Plugin.LogDebug(GameStateSerializer.Serialize());
             OnBecameStable?.Invoke();
         }
         else if (!stable)
@@ -112,27 +112,27 @@ public static class GameStabilityDetector
         var ctx = GameContext.Resolve();
         if (ctx == null)
         {
-            Plugin.Log("IsStable: no context → false");
+            Plugin.LogDebug("IsStable: no context → false");
             return false;
         }
 
         switch (ctx.Type)
         {
             case ContextType.Unknown:
-                Plugin.Log("IsStable: unknown context → false");
+                Plugin.LogDebug("IsStable: unknown context → false");
                 return false;
 
             case ContextType.Map:
-                Plugin.Log("IsStable: map screen → true");
+                Plugin.LogDebug("IsStable: map screen → true");
                 return true;
 
             case ContextType.CardSelection:
             case ContextType.Rewards:
-                Plugin.Log($"IsStable: overlay {ctx.Type} → true");
+                Plugin.LogDebug($"IsStable: overlay {ctx.Type} → true");
                 return true;
 
             case ContextType.HandSelection:
-                Plugin.Log("IsStable: hand card selection → true");
+                Plugin.LogDebug("IsStable: hand card selection → true");
                 return true;
 
             case ContextType.Combat:
@@ -142,7 +142,7 @@ public static class GameStabilityDetector
                     && cm.IsPlayPhase
                     && !cm.PlayerActionsDisabled
                     && RunManager.Instance.ActionExecutor.CurrentlyRunningAction == null;
-                Plugin.Log($"IsStable: combat → IsPlayPhase={cm?.IsPlayPhase}, ActionsDisabled={cm?.PlayerActionsDisabled}, RunningAction={RunManager.Instance.ActionExecutor.CurrentlyRunningAction?.GetType().Name ?? "null"} → {result}");
+                Plugin.LogDebug($"IsStable: combat → IsPlayPhase={cm?.IsPlayPhase}, ActionsDisabled={cm?.PlayerActionsDisabled}, RunningAction={RunManager.Instance.ActionExecutor.CurrentlyRunningAction?.GetType().Name ?? "null"} → {result}");
                 return result;
             }
 
@@ -152,39 +152,39 @@ public static class GameStabilityDetector
                 if (evt is AncientEventModel && EventContextHandler.TryAdvanceAncientDialogue())
                     return false;
                 var evtResult = evt != null && (evt.CurrentOptions.Count > 0 || evt.IsFinished);
-                Plugin.Log($"IsStable: event → hasEvent={evt != null}, options={evt?.CurrentOptions.Count ?? 0}, finished={evt?.IsFinished} → {evtResult}");
+                Plugin.LogDebug($"IsStable: event → hasEvent={evt != null}, options={evt?.CurrentOptions.Count ?? 0}, finished={evt?.IsFinished} → {evtResult}");
                 return evtResult;
             }
 
             case ContextType.RestSite:
             case ContextType.Shop:
-                Plugin.Log($"IsStable: {ctx.Type} → true");
+                Plugin.LogDebug($"IsStable: {ctx.Type} → true");
                 return true;
 
             case ContextType.GameOver:
-                Plugin.Log("IsStable: game over screen → true");
+                Plugin.LogDebug("IsStable: game over screen → true");
                 return true;
 
             case ContextType.MainMenu:
-                Plugin.Log("IsStable: main menu → true");
+                Plugin.LogDebug("IsStable: main menu → true");
                 return true;
 
             case ContextType.CharacterSelect:
-                Plugin.Log("IsStable: character select → true");
+                Plugin.LogDebug("IsStable: character select → true");
                 return true;
 
             case ContextType.Treasure:
             {
                 if (TreasureRoomAutoPatch.AutoClickInProgress)
                 {
-                    Plugin.Log("IsStable: treasure auto-click in progress → false");
+                    Plugin.LogDebug("IsStable: treasure auto-click in progress → false");
                     return false;
                 }
                 var treasureRoom = TreasureRoomAutoPatch.CurrentRoom;
                 var proceedEnabled = treasureRoom != null
                     && GodotObject.IsInstanceValid(treasureRoom)
                     && treasureRoom.ProceedButton?.IsEnabled == true;
-                Plugin.Log($"IsStable: treasure proceed={proceedEnabled} → {proceedEnabled}");
+                Plugin.LogDebug($"IsStable: treasure proceed={proceedEnabled} → {proceedEnabled}");
                 return proceedEnabled;
             }
 

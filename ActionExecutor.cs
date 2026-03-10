@@ -37,7 +37,7 @@ public static class ActionExecutor
                 return ActionResult.Error("Missing 'type' field");
 
             var type = typeProp.GetString()!;
-            Plugin.Log($"Executing action: {type}");
+            Plugin.LogDebug($"Executing action: {type}");
 
             var ctx = GameContext.Resolve();
             if (ctx == null)
@@ -64,7 +64,7 @@ public static class ActionExecutor
         }
         catch (Exception e)
         {
-            Plugin.Log($"Action execution error: {e}");
+            Plugin.LogError($"Action execution error: {e}");
             return ActionResult.Error(e.Message);
         }
     }

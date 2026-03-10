@@ -11,7 +11,7 @@ public static class ActionResult
 
     public static string Error(string message)
     {
-        Plugin.Log($"Action error: {message}");
+        Plugin.LogError($"Action error: {message}");
         return JsonSerializer.Serialize(new { error = message });
     }
 }

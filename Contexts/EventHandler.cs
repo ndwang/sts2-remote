@@ -191,7 +191,7 @@ public class EventContextHandler : IContextHandler
             var hitbox = ancientLayout.GetNodeOrNull<NClickableControl>("%DialogueHitbox");
             if (hitbox == null || !hitbox.Visible || !hitbox.IsEnabled) return false;
 
-            Plugin.Log("Ancient dialogue detected, auto-advancing...");
+            Plugin.LogDebug("Ancient dialogue detected, auto-advancing...");
             hitbox.EmitSignal(NClickableControl.SignalName.Released, hitbox);
 
             var timer = ancientLayout.GetTree().CreateTimer(0.6);
@@ -200,7 +200,7 @@ public class EventContextHandler : IContextHandler
         }
         catch (Exception e)
         {
-            Plugin.Log($"TryAdvanceAncientDialogue error: {e.Message}");
+            Plugin.LogError($"TryAdvanceAncientDialogue error: {e.Message}");
             return false;
         }
     }

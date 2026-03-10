@@ -7,12 +7,21 @@ using MegaCrit.Sts2.Core.Runs;
 
 namespace Sts2Agent;
 
+public enum LogLevel
+{
+    Debug = 0,
+    Info = 1,
+    Error = 2
+}
+
 [ModInitializer("Initialize")]
 public static class Plugin
 {
     public static readonly string LogPath = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         "sts2agent.log");
+
+    public static LogLevel CurrentLogLevel { get; set; } = LogLevel.Info;
 
     private static Harmony? _harmony;
     public static HttpServer? Server { get; private set; }
@@ -36,7 +45,7 @@ public static class Plugin
         }
         catch (Exception e)
         {
-            Log($"Failed to initialize: {e}");
+            LogError($"Failed to initialize: {e}");
         }
     }
 
@@ -48,15 +57,26 @@ public static class Plugin
         }
         catch (Exception e)
         {
-            Plugin.Log($"Error in OnRoomEntered: {e}");
+            LogError($"Error in OnRoomEntered: {e}");
         }
     }
 
-    public static void Log(string message)
+    public static void Log(string message) => Log(LogLevel.Info, message);
+    public static void LogDebug(string message) => Log(LogLevel.Debug, message);
+    public static void LogError(string message) => Log(LogLevel.Error, message);
+
+    public static void Log(LogLevel level, string message)
     {
+        if (level < CurrentLogLevel) return;
         try
         {
-            var line = $"[{DateTime.Now:HH:mm:ss.fff}] {message}\n";
+            var prefix = level switch
+            {
+                LogLevel.Debug => "DEBUG",
+                LogLevel.Error => "ERROR",
+                _ => "INFO"
+            };
+            var line = $"[{DateTime.Now:HH:mm:ss.fff}] [{prefix}] {message}\n";
             File.AppendAllText(LogPath, line, new UTF8Encoding(true));
         }
         catch

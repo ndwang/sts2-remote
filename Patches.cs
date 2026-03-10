@@ -29,11 +29,11 @@ public static class CombatSetupPatch
         try
         {
             GameStabilityDetector.SubscribeToCombat(__instance);
-            Plugin.Log("Combat events wired to stability detector.");
+            Plugin.LogDebug("Combat events wired to stability detector.");
         }
         catch (Exception e)
         {
-            Plugin.Log($"Error in CombatSetupPatch: {e}");
+            Plugin.LogError($"Error in CombatSetupPatch: {e}");
         }
     }
 }
@@ -65,7 +65,7 @@ public static class MapScreenOpenPatch
     [HarmonyPostfix]
     public static void Postfix()
     {
-        Plugin.Log("Map screen opened — scheduling stability check");
+        Plugin.LogDebug("Map screen opened — scheduling stability check");
         GameStabilityDetector.OnRoomEntered();
     }
 }
@@ -88,7 +88,7 @@ public static class RoomEnteredPatch
     [HarmonyPostfix]
     public static void Postfix(AbstractRoom room)
     {
-        Plugin.Log($"Room entered: {room.GetType().Name} — scheduling stability check");
+        Plugin.LogDebug($"Room entered: {room.GetType().Name} — scheduling stability check");
         GameStabilityDetector.OnRoomEntered();
     }
 }
@@ -104,7 +104,7 @@ public static class TreasureRoomAutoPatch
     {
         try
         {
-            Plugin.Log("Treasure room ready — auto-opening chest");
+            Plugin.LogDebug("Treasure room ready — auto-opening chest");
             AutoClickInProgress = true;
             CurrentRoom = __instance;
             _ = AutoOpenTreasure(__instance);
@@ -112,7 +112,7 @@ public static class TreasureRoomAutoPatch
         catch (Exception e)
         {
             AutoClickInProgress = false;
-            Plugin.Log($"Error in TreasureRoomAutoPatch: {e}");
+            Plugin.LogError($"Error in TreasureRoomAutoPatch: {e}");
         }
     }
 
@@ -124,11 +124,11 @@ public static class TreasureRoomAutoPatch
             var chest = await GodotMainThread.RunAsync(() => room.GetNode<NClickableControl>("Chest"));
             if (chest == null)
             {
-                Plugin.Log("Treasure room: chest button not found");
+                Plugin.LogError("Treasure room: chest button not found");
                 return;
             }
             await GodotMainThread.ClickAsync(chest);
-            Plugin.Log("Treasure room: chest clicked, waiting 3s for relics");
+            Plugin.LogDebug("Treasure room: chest clicked, waiting 3s for relics");
 
             // Wait 3 seconds for the chest animation and relics to appear
             await Task.Delay(3000);
@@ -147,7 +147,7 @@ public static class TreasureRoomAutoPatch
                     GodotObject.IsInstanceValid(holder) && holder.IsEnabled && holder.Visible);
                 if (canClick)
                 {
-                    Plugin.Log("Treasure room: clicking relic");
+                    Plugin.LogDebug("Treasure room: clicking relic");
                     await GodotMainThread.ClickAsync(holder);
                     await Task.Delay(500);
                 }
@@ -163,11 +163,11 @@ public static class TreasureRoomAutoPatch
                 await Task.Delay(500);
             }
 
-            Plugin.Log("Treasure room: auto-open complete");
+            Plugin.LogDebug("Treasure room: auto-open complete");
         }
         catch (Exception e)
         {
-            Plugin.Log($"Error in AutoOpenTreasure: {e}");
+            Plugin.LogError($"Error in AutoOpenTreasure: {e}");
         }
         finally
         {
@@ -193,7 +193,7 @@ public static class MainMenuReadyPatch
     [HarmonyPostfix]
     public static void Postfix()
     {
-        Plugin.Log("Main menu ready — scheduling stability check");
+        Plugin.LogDebug("Main menu ready — scheduling stability check");
         GameStabilityDetector.OnScreenTransition();
     }
 }
@@ -204,7 +204,7 @@ public static class CharacterSelectOpenedPatch
     [HarmonyPostfix]
     public static void Postfix()
     {
-        Plugin.Log("Character select screen opened — scheduling stability check");
+        Plugin.LogDebug("Character select screen opened — scheduling stability check");
         GameStabilityDetector.OnScreenTransition();
     }
 }

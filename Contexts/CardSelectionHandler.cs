@@ -147,7 +147,7 @@ public class CardSelectionHandler : IContextHandler
             ? UiHelper.FindFirst<NCardGrid>(ctx.OverlayNode) : null;
 
         var selectedCardName = holder.CardNode?.Model?.Title.ToString() ?? "unknown";
-        Plugin.Log($"SelectCard: overlay type={ctx.OverlayScreen.GetType().Name}, cardIndex={cardIndex}, card={selectedCardName}, holderCount={holders.Count}");
+        Plugin.LogDebug($"SelectCard: overlay type={ctx.OverlayScreen.GetType().Name}, cardIndex={cardIndex}, card={selectedCardName}, holderCount={holders.Count}");
 
         // Emit signal on main thread
         var completed = await Task.WhenAny(
@@ -175,7 +175,7 @@ public class CardSelectionHandler : IContextHandler
         await Task.Delay(200);
         if (!GodotObject.IsInstanceValid(ctx.OverlayNode) || NOverlayStack.Instance?.Peek() != ctx.OverlayScreen)
         {
-            Plugin.Log($"Selected card {cardIndex} (screen auto-closed)");
+            Plugin.LogDebug($"Selected card {cardIndex} (screen auto-closed)");
             return ActionResult.Ok("Card selected");
         }
 
@@ -196,12 +196,12 @@ public class CardSelectionHandler : IContextHandler
         if (enabledButton != null)
         {
             await GodotMainThread.ClickAsync(enabledButton);
-            Plugin.Log("SelectCard: clicked confirm button");
+            Plugin.LogDebug("SelectCard: clicked confirm button");
             await WaitForOverlayClose(ctx.OverlayNode, ctx.OverlayScreen);
         }
         else
         {
-            Plugin.Log("SelectCard: partial selection (no confirm enabled yet)");
+            Plugin.LogDebug("SelectCard: partial selection (no confirm enabled yet)");
         }
 
         Plugin.Log($"Selected card {cardIndex}");
@@ -243,6 +243,6 @@ public class CardSelectionHandler : IContextHandler
             if (!GodotObject.IsInstanceValid(overlayNode) || NOverlayStack.Instance?.Peek() != overlay)
                 return;
         }
-        Plugin.Log("WaitForOverlayClose: timed out");
+        Plugin.LogDebug("WaitForOverlayClose: timed out");
     }
 }
