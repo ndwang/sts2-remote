@@ -9,6 +9,7 @@ using MegaCrit.Sts2.Core.Entities.Cards;
 using MegaCrit.Sts2.Core.Entities.Creatures;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.MonsterMoves.Intents;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Runs;
 using Sts2Agent.Utilities;
 
@@ -23,7 +24,7 @@ public class CombatHandler : IContextHandler
         var combatState = ctx.CombatState;
         if (combatState == null) return null;
 
-        var player = ctx.RunState.Players[0];
+        var player = LocalContext.GetMe(ctx.RunState.Players);
         var pcs = player.PlayerCombatState;
         var result = new Dictionary<string, object>
         {
@@ -61,7 +62,7 @@ public class CombatHandler : IContextHandler
         var cm = CombatManager.Instance;
         if (cm == null || !cm.IsPlayPhase || cm.PlayerActionsDisabled) return commands;
 
-        var player = ctx.RunState.Players[0];
+        var player = LocalContext.GetMe(ctx.RunState.Players);
         var pcs = player.PlayerCombatState;
         if (pcs == null) return commands;
 
@@ -118,7 +119,7 @@ public class CombatHandler : IContextHandler
         if (!cm.IsPlayPhase) return ActionResult.Error("Not in play phase");
 
         var cardIndex = root.GetProperty("cardIndex").GetInt32();
-        var player = ctx.RunState.Players[0];
+        var player = LocalContext.GetMe(ctx.RunState.Players);
         var pcs = player.PlayerCombatState;
         if (pcs == null) return ActionResult.Error("No player combat state");
 
@@ -174,7 +175,7 @@ public class CombatHandler : IContextHandler
         if (cm == null) return ActionResult.Error("Not in combat");
         if (!cm.IsPlayPhase || !cm.IsInProgress) return ActionResult.Error("Not in play phase");
 
-        var player = ctx.RunState.Players[0];
+        var player = LocalContext.GetMe(ctx.RunState.Players);
         if (cm.IsPlayerReadyToEndTurn(player))
             return ActionResult.Error("Turn already ended");
 
@@ -192,7 +193,7 @@ public class CombatHandler : IContextHandler
     private string UsePotion(JsonElement root, ContextInfo ctx)
     {
         var slot = root.GetProperty("slot").GetInt32();
-        var player = ctx.RunState.Players[0];
+        var player = LocalContext.GetMe(ctx.RunState.Players);
 
         var potions = player.PotionSlots;
         if (slot < 0 || slot >= potions.Count)

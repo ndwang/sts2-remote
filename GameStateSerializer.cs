@@ -5,6 +5,7 @@ using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using MegaCrit.Sts2.Core.Combat;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Entities.Players;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Rooms;
@@ -60,9 +61,9 @@ public static class GameStateSerializer
                 : GetContextString(ctx.Type);
 
             // Player info (always present)
-            var players = ctx.RunState!.Players;
-            if (players.Count > 0)
-                state["player"] = SerializePlayer(players[0]);
+            var localPlayer = LocalContext.GetMe(ctx.RunState!.Players);
+            if (localPlayer != null)
+                state["player"] = SerializePlayer(localPlayer);
 
             // Context-specific state from handler
             var handler = ActionExecutor.GetHandlers()

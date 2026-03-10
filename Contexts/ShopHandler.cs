@@ -5,6 +5,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using MegaCrit.Sts2.Core.AutoSlay.Helpers;
 using MegaCrit.Sts2.Core.Entities.Merchant;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Nodes.CommonUi;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using Sts2Agent.Utilities;
@@ -20,7 +21,7 @@ public class ShopHandler : IContextHandler
         var shopRoom = ctx.MerchantRoom;
         if (shopRoom == null) return null;
 
-        var player = ctx.RunState.Players[0];
+        var player = LocalContext.GetMe(ctx.RunState.Players);
         var result = new Dictionary<string, object>
         {
             ["isOpen"] = ctx.ShopIsOpen,
