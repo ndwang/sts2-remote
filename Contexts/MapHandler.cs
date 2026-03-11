@@ -3,7 +3,9 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using MegaCrit.Sts2.Core.AutoSlay.Helpers;
+using MegaCrit.Sts2.Core.Map;
 using MegaCrit.Sts2.Core.Nodes.Screens.Map;
+using MegaCrit.Sts2.Core.Localization;
 using Godot;
 using Sts2Agent.Utilities;
 
@@ -30,7 +32,7 @@ public class MapHandler : IContextHandler
             result["availableNodes"] = ctx.AvailableMapNodes.Select(p => new Dictionary<string, object>
             {
                 ["coord"] = new { row = p.coord.row, col = p.coord.col },
-                ["type"] = p.PointType.ToString()
+                ["type"] = GetMapPointName(p.PointType)
             }).ToList();
         }
 
@@ -49,7 +51,7 @@ public class MapHandler : IContextHandler
             {
                 ["type"] = "select_map_node",
                 ["index"] = i,
-                ["nodeType"] = node.PointType.ToString(),
+                ["nodeType"] = GetMapPointName(node.PointType),
                 ["coord"] = new { row = node.coord.row, col = node.coord.col }
             });
         }
@@ -90,5 +92,21 @@ public class MapHandler : IContextHandler
 
         Plugin.Log($"Selected map node {index} ({target.coord.row}, {target.coord.col})");
         return ActionResult.Ok("Map node selected");
+    }
+
+    private static string GetMapPointName(MapPointType pointType)
+    {
+        var locKey = pointType switch
+        {
+            MapPointType.Unknown => "LEGEND_UNKNOWN",
+            MapPointType.Shop => "LEGEND_MERCHANT",
+            MapPointType.Treasure => "LEGEND_TREASURE",
+            MapPointType.RestSite => "LEGEND_REST",
+            MapPointType.Monster => "LEGEND_ENEMY",
+            MapPointType.Elite => "LEGEND_ELITE",
+            _ => null
+        };
+        if (locKey == null) return pointType.ToString();
+        return TextHelper.StripBBCode(new LocString("map", locKey + ".title").GetFormattedText());
     }
 }

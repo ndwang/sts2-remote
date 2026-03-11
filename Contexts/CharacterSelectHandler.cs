@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Godot;
 using MegaCrit.Sts2.Core.Nodes.Screens.CharacterSelect;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Localization;
 using Sts2Agent.Utilities;
 
 namespace Sts2Agent.Contexts;
@@ -28,7 +29,7 @@ public class CharacterSelectHandler : IContextHandler
             characters.Add(new Dictionary<string, object>
             {
                 ["index"] = i,
-                ["name"] = btn.Character?.Id.Entry ?? "unknown",
+                ["name"] = GetCharacterName(btn),
                 ["locked"] = btn.IsLocked
             });
         }
@@ -43,7 +44,7 @@ public class CharacterSelectHandler : IContextHandler
         {
             var selected = SelectedButtonField.GetValue(ctx.CharacterSelectScreen) as NCharacterSelectButton;
             if (selected != null && GodotObject.IsInstanceValid(selected))
-                result["selected"] = selected.Character?.Id.Entry ?? "unknown";
+                result["selected"] = GetCharacterName(selected);
         }
 
         return result;
@@ -62,7 +63,7 @@ public class CharacterSelectHandler : IContextHandler
             {
                 ["type"] = "select_character",
                 ["index"] = i,
-                ["name"] = btn.Character?.Id.Entry ?? "unknown"
+                ["name"] = GetCharacterName(btn)
             });
         }
 
@@ -94,7 +95,7 @@ public class CharacterSelectHandler : IContextHandler
 
             await GodotMainThread.RunAsync(() => btn.Select());
 
-            var name = btn.Character?.Id.Entry ?? "unknown";
+            var name = GetCharacterName(btn);
             Plugin.Log($"Selected character: {name}");
             return ActionResult.Ok($"Selected character: {name}");
         }
@@ -127,5 +128,12 @@ public class CharacterSelectHandler : IContextHandler
         }
 
         return null;
+    }
+
+    private static string GetCharacterName(NCharacterSelectButton btn)
+    {
+        var character = btn.Character;
+        if (character == null) return "unknown";
+        return TextHelper.StripBBCode(character.Title.GetFormattedText());
     }
 }
