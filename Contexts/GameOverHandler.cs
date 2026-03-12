@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Godot;
 using MegaCrit.Sts2.Core.AutoSlay.Helpers;
+using MegaCrit.Sts2.Core.Context;
 using MegaCrit.Sts2.Core.Models;
 using MegaCrit.Sts2.Core.Nodes.Screens.GameOverScreen;
 using MegaCrit.Sts2.Core.Nodes.Screens.Overlays;
@@ -69,7 +70,9 @@ public class GameOverHandler : IContextHandler
 
         if (history.Players.Count > 0)
         {
-            var player = history.Players[0];
+            var player = (LocalContext.NetId.HasValue
+                ? history.Players.FirstOrDefault(p => p.Id == LocalContext.NetId.Value)
+                : null) ?? history.Players[0];
             var charModel = ModelDb.GetByIdOrNull<CharacterModel>(player.Character);
             result["character"] = charModel != null
                 ? TextHelper.SafeLocString(() => charModel.Title)
