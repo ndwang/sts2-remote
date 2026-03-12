@@ -82,11 +82,12 @@ public class MapHandler : IContextHandler
 
         await GodotMainThread.ClickAsync(targetNode);
 
-        // Wait for map screen to close
+        // Wait for travel to start (IsTravelEnabled becomes false) or map to close
         for (int i = 0; i < 100; i++)
         {
             await Task.Delay(100);
-            if (NMapScreen.Instance is not { IsOpen: true })
+            var ms = NMapScreen.Instance;
+            if (ms == null || !ms.IsOpen || !ms.IsTravelEnabled)
                 break;
         }
 

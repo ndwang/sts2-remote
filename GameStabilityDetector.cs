@@ -7,6 +7,7 @@ using MegaCrit.Sts2.Core.Nodes.Combat;
 using MegaCrit.Sts2.Core.Nodes.Rooms;
 using MegaCrit.Sts2.Core.Rooms;
 using MegaCrit.Sts2.Core.Runs;
+using MegaCrit.Sts2.Core.Nodes.Screens.Map;
 using MegaCrit.Sts2.Core.AutoSlay.Helpers;
 using Sts2Agent.Contexts;
 
@@ -177,8 +178,23 @@ public static class GameStabilityDetector
                 return false;
 
             case ContextType.Map:
-                Plugin.LogDebug("IsStable: map screen → true");
-                return true;
+            {
+                var ms = NMapScreen.Instance;
+                if (ms is { IsTravelEnabled: true })
+                {
+                    Plugin.LogDebug("IsStable: map screen, travel enabled → true");
+                    return true;
+                }
+                // Map is open but not interactive — if travel finished, close it
+                // so the room underneath becomes visible to viewers and agent
+                if (ms is { IsTraveling: false })
+                {
+                    Plugin.Log("Map overlay stuck open after travel — closing");
+                    ms.Close();
+                }
+                Plugin.LogDebug($"IsStable: map screen, travel not enabled (traveling={ms?.IsTraveling}) → false");
+                return false;
+            }
 
             case ContextType.CardSelection:
             case ContextType.Rewards:
