@@ -21,7 +21,7 @@ public static class Plugin
         Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
         "sts2agent.log");
 
-    public static LogLevel CurrentLogLevel { get; set; } = LogLevel.Info;
+    public static LogLevel CurrentLogLevel { get; set; } = LogLevel.Error;
 
     private static Harmony? _harmony;
     public static HttpServer? Server { get; private set; }
