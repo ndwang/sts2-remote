@@ -20,6 +20,7 @@ public static class GameStabilityDetector
     private static bool _wasStable;
     private static MegaCrit.Sts2.Core.GameActions.ActionExecutor? _subscribedExecutor;
     private static CombatManager? _subscribedCombat;
+    private static readonly Callable StabilityCallable = Callable.From(CheckStability);
 
     public static void Initialize()
     {
@@ -116,7 +117,7 @@ public static class GameStabilityDetector
     {
         if (_pendingCheck) return;
         _pendingCheck = true;
-        Callable.From(CheckStability).CallDeferred();
+        StabilityCallable.CallDeferred();
     }
 
     private static void CheckStability()
@@ -143,6 +144,12 @@ public static class GameStabilityDetector
         }
     }
 
+    private static void OnDelayedCheckTimeout()
+    {
+        _pendingCheck = false;
+        ScheduleStabilityCheck();
+    }
+
     private static void ScheduleDelayedCheck()
     {
         if (_pendingCheck) return;
@@ -155,11 +162,7 @@ public static class GameStabilityDetector
             return;
         }
         var timer = tree.CreateTimer(0.2);
-        timer.Timeout += () =>
-        {
-            _pendingCheck = false;
-            ScheduleStabilityCheck();
-        };
+        timer.Timeout += OnDelayedCheckTimeout;
     }
 
     public static bool IsStable()

@@ -14,9 +14,13 @@ public static class EventLog
 {
     private static readonly ConcurrentQueue<GameEvent> Events = new();
 
+    private const int MaxEvents = 1000;
+
     public static void Add(string type, string message, Dictionary<string, object>? details = null)
     {
         Events.Enqueue(new GameEvent { Type = type, Message = message, Details = details });
+        while (Events.Count > MaxEvents)
+            Events.TryDequeue(out _);
         Plugin.LogDebug($"[Event] {type}: {message}");
     }
 
