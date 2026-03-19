@@ -66,6 +66,10 @@ dotnet build
 
 Copy the output DLL to the STS2 mods folder.
 
+## Example Agent
+
+See [ClaudePlaysSTS2](https://github.com/ndwang/ClaudePlaysSTS2) for an example agent that uses this mod's API to play the game.
+
 ## Logs
 
 The mod writes to `~/sts2agent.log`. Set the log level at runtime via the `/log-level` endpoint.
